@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	conf, err := config.LoadConfig("/")
+	conf, err := config.LoadConfig("./config.yaml")
 	if err != nil {
 		log.Fatalf("can't parse config: %v", err)
 	}
@@ -30,7 +30,7 @@ func main() {
 		Handler: mux,
 	}
 	go func() {
-		// start server
+		log.Printf("starting balancer on port: %s", server.Addr)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %s\n", err)
 		}

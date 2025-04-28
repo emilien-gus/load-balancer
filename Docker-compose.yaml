@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  balancer:
+    build: .
+    container_name: load-balancer
+    ports:
+      - "8080:8080"
+    # #depends_on:
+    # #db:
+    #     condition: service_healthy
+    networks:
+      - internal
+  # db:
+  #   image: postgres:13
+  #   container_name: postgres
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: password
+  #     POSTGRES_DB: balancer
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     - ./migrations/init.sql:/docker-entrypoint-initdb.d/init.sql
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres -d balancer"]
+  #     interval: 5s
+  #     timeout: 2s
+  #     retries: 1
+  #   networks:
+  #     - internal
+
+  backend1:
+    image: strm/helloworld-http
+    networks:
+      - internal
+  backend2:
+    image: strm/helloworld-http
+    networks:
+      - internal
+  backend3:
+    image: strm/helloworld-http
+    networks:
+      - internal
+
+volumes:
+  postgres_data:
+
+networks:
+  internal:
