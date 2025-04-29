@@ -32,7 +32,7 @@ func NewLimiter(defaultCap int32, defaultRate int, storage repository.ClientsRep
 }
 
 func (rl *RateLimiter) Allow(ctx context.Context, key string) (bool, error) {
-	// 1. Проверяем существующий бакет
+	// 1. check if there are clients bucket in map
 	if val, ok := rl.buckets.Load(key); ok {
 		bucket := val.(*TokenBucket)
 		if bucket.checkNotEmpty() {
@@ -41,13 +41,13 @@ func (rl *RateLimiter) Allow(ctx context.Context, key string) (bool, error) {
 		return false, nil
 	}
 
-	// 2. Создаем новый бакет
+	// 2. Getting from db bucket parametrs for user. If there is no client in db insirting new client with default parameters
 	capacity, rate, err := rl.storage.GetOrCreate(ctx, key, rl.defaultCap, rl.defaultRate)
 	if err != nil {
 		return false, fmt.Errorf("failed to get/create bucket: %w", err)
 	}
 
-	// 3. Валидация параметров
+	// 3. validating params
 	if capacity <= 0 || rate <= 0 {
 		return false, fmt.Errorf("invalid bucket parameters: capacity=%d, rate=%d", capacity, rate)
 	}

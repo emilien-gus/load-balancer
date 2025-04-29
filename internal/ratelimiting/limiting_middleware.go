@@ -13,7 +13,7 @@ var (
 // middleware checking clients for having at least one token
 func (l *RateLimiter) RateLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Получаем идентификатор клиента
+		// getting clients id (ip if there is not X-API-KEY header)
 		clientID := getClientIdentifier(r)
 
 		// checking limits

@@ -18,6 +18,7 @@ import (
 )
 
 func main() {
+	// init connection with database
 	if err := data.InitDB(); err != nil {
 		log.Fatalf("failed to open connection with db: %v", err)
 	}
@@ -27,6 +28,8 @@ func main() {
 		}
 		log.Printf("connection with db is closed")
 	}()
+
+	// getting config from file
 	conf, err := config.LoadConfig("./config.yaml")
 	if err != nil {
 		log.Fatalf("can't parse config: %v", err)
@@ -44,11 +47,14 @@ func main() {
 	// init rate limit logic
 	clientRepo := repository.NewClientsRepo(data.DB)
 	rateLimit := ratelimiting.NewLimiter(conf.BucketCapacity, conf.RatePerSec, clientRepo)
+	log.Printf("rate limiting configured: capacity=%d, rate=%d/sec", conf.BucketCapacity, conf.RatePerSec)
 	defer rateLimit.Stop()
 
+	// setup routes
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", balancer.ServeHTTP)
 	limitMux := rateLimit.RateLimitMiddleware(mux)
+
 	addr := ":" + strconv.Itoa(conf.Port)
 	server := &http.Server{
 		Addr:    addr,
@@ -62,25 +68,27 @@ func main() {
 		}
 	}()
 
-	// Wait for interrupt signal to gracefully shutdown the server with
-	// a timeout of 5 seconds.
+	// waiting for SIGINT or SIGTERM
 	quit := make(chan os.Signal, 1)
-	// kill (no param) default send syscall.SIGTERM
-	// kill -2 is syscall.SIGINT
-	// kill -9 is syscall. SIGKILL but can"t be catch, so don't need add it
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(quit)
+
 	<-quit
-	log.Println("Shutdown Server ...")
+	log.Println("Shutting down server...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
 	if err := server.Shutdown(ctx); err != nil {
 		log.Printf("Server Shutdown: %v", err)
 	}
-	// catching ctx.Done(). timeout of 5 seconds.
+
 	select {
 	case <-ctx.Done():
-		log.Println("timeout of 5 seconds.")
+		log.Println("Shutdown completed after timeout.")
+	default:
+		log.Println("Server exited gracefully.")
 	}
+
 	log.Println("Server exiting")
 }

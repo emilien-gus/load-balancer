@@ -9,19 +9,19 @@ import (
 )
 
 type ProxyHandler struct {
-	Balancer balancer.Balancer
+	balancer balancer.Balancer
 }
 
 func NewProxyHandler(bal balancer.Balancer) *ProxyHandler {
 	return &ProxyHandler{
-		Balancer: bal,
+		balancer: bal,
 	}
 }
 
 func (p *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 
-	backend := p.Balancer.GetNextBackend()
+	backend := p.balancer.GetNextBackend()
 	if backend == nil {
 		log.Printf("[ERROR] No available backend to handle request: %s %s", r.Method, r.URL.Path)
 		RespondWithError(w, http.StatusServiceUnavailable, "Service unavailable")
