@@ -7,8 +7,10 @@ import (
 )
 
 type Config struct {
-	Port     int      `yaml:"port"`
-	Backends []string `yaml:"backends"`
+	Port           int      `yaml:"port"`
+	Backends       []string `yaml:"backends"`
+	BucketCapacity int32    `yaml:"bucket_capacity"`
+	RatePerSec     int      `yaml:"rate_per_second"`
 }
 
 func LoadConfig(path string) (*Config, error) {

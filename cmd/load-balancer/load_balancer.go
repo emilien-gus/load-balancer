@@ -3,7 +3,10 @@ package main
 import (
 	"balancer/internal/balancer"
 	"balancer/internal/config"
+	"balancer/internal/data"
 	"balancer/internal/proxy"
+	"balancer/internal/ratelimiting"
+	"balancer/internal/repository"
 	"context"
 	"log"
 	"net/http"
@@ -15,20 +18,43 @@ import (
 )
 
 func main() {
+	if err := data.InitDB(); err != nil {
+		log.Fatalf("failed to open connection with db: %v", err)
+	}
+	defer func() {
+		if err := data.CloseDB(); err != nil {
+			log.Printf("error at closing connection with db: %v", err)
+		}
+		log.Printf("connection with db is closed")
+	}()
 	conf, err := config.LoadConfig("./config.yaml")
 	if err != nil {
 		log.Fatalf("can't parse config: %v", err)
 	}
+
+	if conf.BucketCapacity <= 0 || conf.RatePerSec < 0 {
+		log.Fatal("wrong config parametrs")
+	}
+
+	// init balancer logic
 	srvPool := balancer.NewServerPool(conf.Backends)
 	algorithm := balancer.NewRoundRobin(srvPool)
 	balancer := proxy.NewProxyHandler(algorithm)
+
+	// init rate limit logic
+	clientRepo := repository.NewClientsRepo(data.DB)
+	rateLimit := ratelimiting.NewLimiter(conf.BucketCapacity, conf.RatePerSec, clientRepo)
+	defer rateLimit.Stop()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", balancer.ServeHTTP)
+	limitMux := rateLimit.RateLimitMiddleware(mux)
 	addr := ":" + strconv.Itoa(conf.Port)
 	server := &http.Server{
 		Addr:    addr,
-		Handler: mux,
+		Handler: limitMux,
 	}
+
 	go func() {
 		log.Printf("starting balancer on port: %s", server.Addr)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {

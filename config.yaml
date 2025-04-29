@@ -4,3 +4,7 @@ backends:
   - http://backend1:80
   - http://backend2:80
   - http://backend3:80
+
+bucket_capacity: 50
+
+rate_per_second: 5

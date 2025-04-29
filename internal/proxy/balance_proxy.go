@@ -24,7 +24,7 @@ func (p *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	backend := p.Balancer.GetNextBackend()
 	if backend == nil {
 		log.Printf("[ERROR] No available backend to handle request: %s %s", r.Method, r.URL.Path)
-		p.respondWithError(w, http.StatusServiceUnavailable, "Service unavailable")
+		RespondWithError(w, http.StatusServiceUnavailable, "Service unavailable")
 		return
 	}
 
@@ -36,7 +36,7 @@ func (p *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[INFO] Request %s %s completed in %v", r.Method, r.URL.Path, duration)
 }
 
-func (p *ProxyHandler) respondWithError(w http.ResponseWriter, code int, message string) {
+func RespondWithError(w http.ResponseWriter, code int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 
